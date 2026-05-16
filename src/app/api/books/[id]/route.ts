@@ -1,3 +1,4 @@
+```ts id="8sv4wz"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -7,56 +8,92 @@ export async function DELETE(
 ) {
   try {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    // Use select('*') so TypeScript resolves all columns including teacher_id
-    const { data: book } = await supabase
+    // Fetch book
+    const { data: book, error: bookError } = await supabase
       .from('books')
       .select('*')
       .eq('id', params.id)
       .single()
 
-    if (!book || book.teacher_id !== user.id) {
-      return NextResponse.json({ error: 'Book not found' }, { status: 404 })
+    if (bookError || !book) {
+      return NextResponse.json(
+        { error: 'Book not found' },
+        { status: 404 }
+      )
     }
 
-    // Get topics to clean up infographic storage files
+    // Fix TypeScript issue
+    const typedBook = book as any
+
+    if (typedBook.teacher_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Book not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get topics
     const { data: topics } = await supabase
       .from('topics')
       .select('*')
       .eq('book_id', params.id)
 
+    // Remove infographic files
     if (topics && topics.length > 0) {
       const infographicPaths = topics
-        .filter((t) => t.infographic_path)
-        .map((t) => t.infographic_path as string)
+        .filter((t: any) => t.infographic_path)
+        .map((t: any) => t.infographic_path)
 
       if (infographicPaths.length > 0) {
-        await supabase.storage.from('infographics').remove(infographicPaths)
+        await supabase.storage
+          .from('infographics')
+          .remove(infographicPaths)
       }
     }
 
-    // Delete book PDF from storage
-    await supabase.storage.from('books').remove([book.file_path])
+    // Remove PDF file
+    if (typedBook.file_path) {
+      await supabase.storage
+        .from('books')
+        .remove([typedBook.file_path])
+    }
 
-    // Delete book row (topics cascade via FK)
-    const { error } = await supabase
+    // Delete book
+    const { error: deleteError } = await supabase
       .from('books')
       .delete()
       .eq('id', params.id)
       .eq('teacher_id', user.id)
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (deleteError) {
+      return NextResponse.json(
+        { error: deleteError.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+    })
   } catch (error) {
     console.error('Delete error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
+```
