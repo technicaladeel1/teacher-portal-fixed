@@ -1,4 +1,3 @@
-```ts id="8sv4wz"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -20,7 +19,6 @@ export async function DELETE(
       )
     }
 
-    // Fetch book
     const { data: book, error: bookError } = await supabase
       .from('books')
       .select('*')
@@ -34,8 +32,7 @@ export async function DELETE(
       )
     }
 
-    // Fix TypeScript issue
-    const typedBook = book as any
+    const typedBook: any = book
 
     if (typedBook.teacher_id !== user.id) {
       return NextResponse.json(
@@ -44,13 +41,11 @@ export async function DELETE(
       )
     }
 
-    // Get topics
     const { data: topics } = await supabase
       .from('topics')
       .select('*')
       .eq('book_id', params.id)
 
-    // Remove infographic files
     if (topics && topics.length > 0) {
       const infographicPaths = topics
         .filter((t: any) => t.infographic_path)
@@ -63,14 +58,12 @@ export async function DELETE(
       }
     }
 
-    // Remove PDF file
     if (typedBook.file_path) {
       await supabase.storage
         .from('books')
         .remove([typedBook.file_path])
     }
 
-    // Delete book
     const { error: deleteError } = await supabase
       .from('books')
       .delete()
@@ -96,4 +89,3 @@ export async function DELETE(
     )
   }
 }
-```
