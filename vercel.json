@@ -1,0 +1,14 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "functions": {
+    "src/app/api/books/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/infographics/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}
